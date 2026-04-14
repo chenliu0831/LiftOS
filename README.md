@@ -54,7 +54,7 @@ Each run produces:
 | `up_peak` | Morning rush. 80% of passengers start at ground floor and travel to random upper floors. Arrival rate 0.5. |
 | `down_peak` | Evening rush. All passengers start on upper floors and travel to ground. Arrival rate 0.5. |
 | `normal_hour` | Mid-day inter-floor traffic. Random origins and destinations across all floors. Arrival rate 0.3. |
-| `stress` | Load spike. Baseline rate 0.3 with a 2.0x burst at 30% through the simulation lasting 20% of total duration. Tests behavior under sudden congestion. |
+| `stress` | Load spike. Baseline rate 0.3 with a 2.0x burst from 30% to 50% of total duration. Tests behavior under sudden congestion. |
 
 All workloads use Poisson arrivals with exponential inter-arrival times. The seed parameter makes them deterministic.
 
@@ -118,10 +118,10 @@ See [webapp/README.md](webapp/README.md) for details.
 | down_peak | total mean / p95 | **29 / 52** | 37 / 64 | 35 / 80 |
 | normal_hour | wait mean / p95 | **7 / 16** | 13 / 32 | 10 / 42 |
 | normal_hour | total mean / p95 | **20 / 37** | 26 / 52 | 28 / 65 |
-| stress | wait mean / p95 | **32 / 135** | 44 / 151 | 51 / 233 |
-| stress | total mean / p95 | **57 / 162** | 70 / 178 | 78 / 254 |
+| stress | wait mean / p95 | **8 / 21** | 16 / 40 | 12 / 43 |
+| stress | total mean / p95 | **24 / 50** | 32 / 68 | 33 / 78 |
 
-Adaptive wins on mean across every workload and metric. On stress p95 -- the hardest metric to optimize -- adaptive beats round-robin by 11% on wait and 9% on total.
+Adaptive wins on mean and p95 across every workload and metric.
 
 ## Optimization Journey
 
