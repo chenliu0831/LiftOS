@@ -99,39 +99,47 @@ class Adaptive:
         if car.direction is Direction.IDLE:
             return distance
 
-        # Count pending stops between car and source in current direction
         targets = car.target_floors()
         match car.direction:
             case Direction.UP:
                 if source >= car.floor:
-                    stops_between = sum(
-                        1 for f in targets if car.floor < f < source
-                    )
-                    return distance + stops_between * 2
+                    stops = sum(1 for f in targets if car.floor < f < source)
+                    return distance + stops * 2
                 else:
-                    # Car must go up, reverse, then come down to source
-                    max_target = max(targets, default=car.floor)
-                    up_distance = max_target - car.floor
-                    stops_up = sum(
-                        1 for f in targets if f > car.floor
+                    turnaround = max(
+                        (f for f in targets if f > car.floor),
+                        default=car.floor,
                     )
-                    down_distance = max_target - source
-                    return up_distance + stops_up * 2 + down_distance
+                    stops_fwd = sum(1 for f in targets if f > car.floor)
+                    stops_rev = sum(
+                        1 for f in targets if source < f < car.floor
+                    )
+                    return (
+                        (turnaround - car.floor)
+                        + stops_fwd * 2
+                        + (turnaround - source)
+                        + stops_rev * 2
+                    )
 
             case Direction.DOWN:
                 if source <= car.floor:
-                    stops_between = sum(
-                        1 for f in targets if source < f < car.floor
-                    )
-                    return distance + stops_between * 2
+                    stops = sum(1 for f in targets if source < f < car.floor)
+                    return distance + stops * 2
                 else:
-                    min_target = min(targets, default=car.floor)
-                    down_distance = car.floor - min_target
-                    stops_down = sum(
-                        1 for f in targets if f < car.floor
+                    turnaround = min(
+                        (f for f in targets if f < car.floor),
+                        default=car.floor,
                     )
-                    up_distance = source - min_target
-                    return down_distance + stops_down * 2 + up_distance
+                    stops_fwd = sum(1 for f in targets if f < car.floor)
+                    stops_rev = sum(
+                        1 for f in targets if car.floor < f < source
+                    )
+                    return (
+                        (car.floor - turnaround)
+                        + stops_fwd * 2
+                        + (source - turnaround)
+                        + stops_rev * 2
+                    )
 
         return distance  # fallback
 
