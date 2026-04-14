@@ -30,6 +30,20 @@ class TestCarTargetFloors:
         car.assigned = [_passenger("p2", 7, 2)]
         assert car.target_floors() == {10, 7}
 
+    def test_full_car_excludes_pickup_floors(self):
+        car = Car(id="C0", floor=1, capacity=2, direction=Direction.UP)
+        car.passengers = [_passenger("p1", 1, 5), _passenger("p2", 1, 8)]
+        car.assigned = [_passenger("p3", 3, 10)]
+        # Car is full (2/2) — pickup floor 3 should be excluded
+        assert car.target_floors() == {5, 8}
+
+    def test_full_car_still_includes_dropoff_floors(self):
+        car = Car(id="C0", floor=1, capacity=1, direction=Direction.UP)
+        car.passengers = [_passenger("p1", 1, 5)]
+        car.assigned = [_passenger("p2", 5, 10)]
+        # Full, but floor 5 is both a dropoff and a pickup — included via dropoff
+        assert car.target_floors() == {5}
+
 
 class TestCarState:
     def test_idle_when_empty_and_no_work(self):

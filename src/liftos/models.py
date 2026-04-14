@@ -51,12 +51,19 @@ class Car:
         )
 
     def target_floors(self) -> set[int]:
-        """Floors this car needs to visit: pickups + dropoffs."""
+        """Floors this car needs to visit: dropoffs + boardable pickups.
+
+        Pickup floors are only included when the car has remaining capacity.
+        A full car should deliver first, freeing capacity, before stopping
+        for new pickups. (Pickup floors that coincide with a dropoff floor
+        are still visited — alighting happens before boarding.)
+        """
         floors: set[int] = set()
         for p in self.passengers:
             floors.add(p.request.dest)
-        for p in self.assigned:
-            floors.add(p.request.source)
+        if self.remaining_capacity > 0:
+            for p in self.assigned:
+                floors.add(p.request.source)
         return floors
 
 
