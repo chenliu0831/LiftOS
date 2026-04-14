@@ -121,3 +121,69 @@ class TestAdaptive:
         # source=3 is below both cars — C1 going DOWN should win
         result = adaptive.assign(_req("p1", source=3, dest=1), building)
         assert result.id == "C1"
+
+    def test_load_includes_assigned_passengers(self):
+        """Assigned passengers count toward load, preventing piling."""
+        cars = [
+            Car(id="C0", floor=1, capacity=4),
+            Car(id="C1", floor=1, capacity=4),
+        ]
+        building = Building(num_floors=10, cars=cars)
+        adaptive = Adaptive()
+
+        # Assign 3 passengers to C0 sequentially
+        for i in range(3):
+            car = adaptive.assign(_req(f"p{i}", source=3, dest=7), building)
+            building.cars[building.cars.index(car)].assigned.append(
+                _passenger(f"p{i}", 3, 7, car.id)
+            )
+
+        # 4th passenger: C0 has 3 assigned, C1 has 0 → should go to C1
+        result = adaptive.assign(_req("p3", source=3, dest=7), building)
+        assert result.id == "C1"
+
+    def test_eta_overflow_when_over_capacity(self):
+        """Car at capacity gets a round-trip penalty in ETA."""
+        cars = [
+            Car(id="C0", floor=1, capacity=2),  # close but full
+            Car(id="C1", floor=8, capacity=2),  # far but empty
+        ]
+        # Fill C0: 2 onboard = at capacity
+        cars[0].passengers = [
+            _passenger("x0", 1, 5, "C0"),
+            _passenger("x1", 1, 5, "C0"),
+        ]
+        building = Building(num_floors=10, cars=cars)
+        # Use pure ETA weight so only distance matters
+        adaptive = Adaptive(w_eta=1.0, w_ride=0.0, w_load=0.0)
+
+        # C0 is 2 floors away but over capacity → round-trip penalty
+        # C1 is 5 floors away but empty → should win
+        result = adaptive.assign(_req("p1", source=3, dest=7), building)
+        assert result.id == "C1"
+
+    def test_deadline_penalty_fires_when_eta_exceeds_threshold(self):
+        """Distant car gets deadline penalty, nearby car wins."""
+        cars = [
+            Car(id="C0", floor=1, capacity=8),   # ETA to floor 10 = 9
+            Car(id="C1", floor=10, capacity=8),   # ETA to floor 10 = 0
+        ]
+        # num_floors=5 → deadline = 10. C0 ETA=9 < 10, no penalty.
+        # But with num_floors=4 → deadline = 8. C0 ETA=9 > 8, penalty fires.
+        building = Building(num_floors=4, cars=cars)
+        adaptive = Adaptive(w_eta=0.0, w_ride=0.0, w_load=1.0)
+
+        # With pure load weight and both empty, they'd tie → C0 wins by id.
+        # But deadline penalty on C0 (ETA 9 > deadline 8) should push to C1.
+        result = adaptive.assign(_req("p1", source=10, dest=1), building)
+        assert result.id == "C1"
+
+    def test_deadline_penalty_silent_under_threshold(self):
+        """No penalty when ETA is within deadline."""
+        cars = [Car(id="C0", floor=1, capacity=8)]
+        building = Building(num_floors=10, cars=cars)
+        adaptive = Adaptive()
+
+        # ETA = 4 floors, deadline = 20 → no penalty
+        adaptive.assign(_req("p1", source=5, dest=8), building)
+        assert adaptive.last_scores["deadline"] == 0.0

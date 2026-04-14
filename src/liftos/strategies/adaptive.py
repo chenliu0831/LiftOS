@@ -19,6 +19,8 @@ class Adaptive:
         w_eta: float = 0.4,
         w_ride: float = 0.2,
         w_load: float = 0.4,
+        w_deadline: float = 1.0,
+        deadline_mult: float = 0.75,
     ) -> None:
         total = w_eta + w_ride + w_load
         if abs(total - 1.0) > 1e-6:
@@ -26,16 +28,27 @@ class Adaptive:
         self._w_eta = w_eta
         self._w_ride = w_ride
         self._w_load = w_load
+        self._w_deadline = w_deadline
+        self._deadline_mult = deadline_mult
 
     def assign(self, request: Request, building: Building) -> Car:
         best_car: Car | None = None
         best_score = float("inf")
         best_breakdown: dict[str, float] | None = None
 
+        pickup_deadline = building.num_floors * self._deadline_mult
+
         for car in building.cars:
             eta_raw = self._estimate_eta(car, request.source, building.num_floors)
             ride_raw = self._estimate_ride(car, request.source, request.dest)
-            load_raw = len(car.passengers) / car.capacity if car.capacity > 0 else 1.0
+
+            # Include assigned passengers in load — prevents piling
+            committed = len(car.passengers) + len(car.assigned)
+            load_raw = committed / car.capacity if car.capacity > 0 else 1.0
+
+            # Capacity overflow — passenger won't board on first visit
+            if committed >= car.capacity:
+                eta_raw += 2 * building.num_floors
 
             # Normalize to [0, 1]
             max_eta = 2 * building.num_floors
@@ -44,13 +57,20 @@ class Adaptive:
             max_ride = building.num_floors + len(car.passengers) * 2
             norm_ride = min(ride_raw / max_ride, 1.0) if max_ride > 0 else 0.0
 
-            norm_load = load_raw  # already [0, 1]
+            norm_load = min(load_raw, 1.0)
 
             total = (
                 self._w_eta * norm_eta
                 + self._w_ride * norm_ride
                 + self._w_load * norm_load
             )
+
+            # Pickup deadline penalty
+            deadline_penalty = 0.0
+            if pickup_deadline > 0 and eta_raw > pickup_deadline:
+                overdue_ratio = (eta_raw - pickup_deadline) / pickup_deadline
+                deadline_penalty = overdue_ratio * self._w_deadline
+                total += deadline_penalty
 
             if total < best_score or (total == best_score and car.id < best_car.id):
                 best_car = car
@@ -59,6 +79,7 @@ class Adaptive:
                     "eta": round(norm_eta, 4),
                     "ride": round(norm_ride, 4),
                     "load": round(norm_load, 4),
+                    "deadline": round(deadline_penalty, 4),
                     "total": round(total, 4),
                 }
 
