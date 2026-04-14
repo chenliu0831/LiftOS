@@ -90,6 +90,20 @@ Lowest total score wins. Three optimizations layer on top of the base scorer:
 
 Independent of the scheduler, idle cars are proactively moved toward high-demand floors. A demand tracker records which floors generate the most requests. Each tick, idle cars move one floor toward the highest-demand floor that doesn't already have 50% of the fleet parked there. This reduces pickup time for the next wave of requests.
 
+## Simulation Viewer
+
+A browser-based replay tool for visualizing benchmark runs. Animated elevator shafts, live stats, and real-time charts update as the simulation plays back tick by tick.
+
+[Watch the demo (docs/demo.mov)](docs/demo.mov)
+
+**Features:** animated SVG building with car movement and direction indicators, per-floor waiting passenger counts, four live line charts (wait time, total time, car occupancy, throughput), running mean/p95 stats, scrubber and speed control (1-100x), keyboard shortcuts (Space, arrows). Switch between algorithms and workloads mid-replay to compare behavior.
+
+```bash
+cd webapp && npm install && npm run dev
+```
+
+See [webapp/README.md](webapp/README.md) for details.
+
 ## Benchmark Results
 
 20 floors, 6 elevators, capacity 8, 500 passengers, seed 42.
