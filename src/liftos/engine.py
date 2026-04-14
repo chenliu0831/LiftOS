@@ -3,11 +3,12 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import TYPE_CHECKING
 
+from liftos.demand import DemandTracker, redistribute_target
 from liftos.movement import MoveStrategy, move_one_floor
 
 if TYPE_CHECKING:
     from liftos.logger import DispatchLogger, ElevatorLogger, PassengerLogger
-    from liftos.models import Building, Car, Passenger, Request
+    from liftos.models import Building, Car, Direction, Passenger, Request
     from liftos.scheduler import Scheduler
 
 
@@ -44,6 +45,7 @@ class Engine:
         self._scheduler = scheduler
         self._move_strategy = move_strategy
         self._loggers = loggers or Loggers()
+        self._demand = DemandTracker()
 
     def run(self, requests: list[Request], max_ticks: int = 2500) -> EngineRunResult:
         requests_by_tick: dict[int, list[Request]] = {}
@@ -65,6 +67,10 @@ class Engine:
             # MERGE
             for car in self._building.cars:
                 self._merge(car, tick)
+
+            # REDISTRIBUTE
+            for car in self._building.cars:
+                self._redistribute(car)
 
             # FINISH
             self._finish(tick)
@@ -88,8 +94,24 @@ class Engine:
         for req in requests:
             if req.source == req.dest:
                 continue
+            self._demand.record(req.source)
             passengers.append(Passenger(request=req, car_id=""))
         return passengers
+
+    def _redistribute(self, car: Car) -> None:
+        from liftos.models import Direction
+
+        if not car.is_idle:
+            return
+        target = redistribute_target(car, self._building, self._demand)
+        if target is None or target == car.floor:
+            return
+        if target > car.floor:
+            car.direction = Direction.UP
+            car.floor += 1
+        else:
+            car.direction = Direction.DOWN
+            car.floor -= 1
 
     def _dispatch(self, passengers: list[Passenger], tick: int) -> None:
         for passenger in passengers:

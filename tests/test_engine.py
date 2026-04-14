@@ -150,3 +150,31 @@ class TestCompletenessValidation:
         assert not result.complete
         assert len(result.unserved) == 1
         assert result.unserved[0].request.id == "p1"
+
+
+class TestIdleRedistribution:
+    """Idle cars should move toward high-demand floors between batches.
+
+    1 car at floor 8. p1 (1→5) at tick 0. p2 (1→5) at tick 50.
+
+    After serving p1, the car idles at floor 5. Redistribution moves it
+    toward floor 1 (the only demand floor). By tick 50 the car is already
+    at floor 1, so p2's wait is just the 2-tick stop cost.
+    """
+
+    def test_redistribution_reduces_wait_time(self):
+        building = Building(
+            num_floors=10,
+            cars=[Car(id="C0", floor=8, capacity=8)],
+        )
+        requests = [
+            Request(id="p1", source=1, dest=5, time=0),
+            Request(id="p2", source=1, dest=5, time=50),
+        ]
+
+        result = Engine(building, RoundRobin(), Look()).run(requests, max_ticks=100)
+
+        assert result.complete
+        p2 = next(p for p in result.passengers if p.request.id == "p2")
+        # Car redistributed to floor 1 before p2 arrives → wait = 2 (stop cost only)
+        assert p2.pickup_tick - p2.request.time == 2
