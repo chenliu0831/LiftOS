@@ -1,5 +1,14 @@
+# OS
+.DS_Store
+
 # Simulation output
 logs/
+
+# Node / TypeScript
+node_modules/
+dist/
+*.tsbuildinfo
+.vite/
 
 # Byte-compiled / optimized / DLL files
 __pycache__/

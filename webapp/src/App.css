@@ -1,0 +1,284 @@
+/* === Reset & Base === */
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+:root {
+  --bg-primary: #1a1a2e;
+  --bg-secondary: #16213e;
+  --bg-building: #0f0f23;
+  --bg-input: #0f0f23;
+  --text-primary: #e8e8e8;
+  --text-secondary: #8888aa;
+  --text-muted: #555;
+  --accent: #4a6fa5;
+  --border: #2a2a4a;
+  --green: #4ade80;
+  --orange: #f39c12;
+  --red: #e74c3c;
+  --blue: #4a90d9;
+}
+
+html,
+body,
+#root {
+  height: 100%;
+  overflow: hidden;
+}
+
+body {
+  font-family: -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  font-size: 13px;
+  background: var(--bg-primary);
+  color: var(--text-primary);
+}
+
+/* === Layout === */
+.app-layout {
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
+}
+
+.app-topbar {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 8px 16px;
+  background: var(--bg-secondary);
+  border-bottom: 1px solid var(--border);
+  flex-shrink: 0;
+}
+
+.app-title {
+  font-size: 16px;
+  font-weight: 700;
+  letter-spacing: 0.5px;
+}
+
+.app-body {
+  display: flex;
+  flex: 1;
+  min-height: 0;
+}
+
+.app-building {
+  width: 420px;
+  flex-shrink: 0;
+  background: var(--bg-building);
+  border-right: 1px solid var(--border);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow-y: auto;
+  padding: 12px;
+}
+
+.app-charts {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  overflow-y: auto;
+  padding: 8px 12px;
+}
+
+.loading {
+  color: var(--text-secondary);
+  font-size: 14px;
+}
+
+/* === Run Selector === */
+.run-selector {
+  display: flex;
+  gap: 8px;
+}
+
+.run-selector select {
+  background: var(--bg-input);
+  color: var(--text-primary);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  padding: 4px 8px;
+  font-size: 12px;
+  cursor: pointer;
+}
+
+.run-selector select:hover {
+  border-color: var(--accent);
+}
+
+/* === Stats Bar === */
+.stats-bar {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 6px 16px;
+  background: var(--bg-secondary);
+  border-bottom: 1px solid var(--border);
+  flex-shrink: 0;
+  font-size: 12px;
+  overflow-x: auto;
+}
+
+.stat {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  white-space: nowrap;
+}
+
+.stat-label {
+  color: var(--text-secondary);
+}
+
+.stat-value {
+  color: var(--text-primary);
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+
+.stat-sep {
+  width: 1px;
+  height: 16px;
+  background: var(--border);
+}
+
+/* === Playback Controls === */
+.playback-bar {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 8px 16px;
+  background: var(--bg-secondary);
+  border-top: 1px solid var(--border);
+  flex-shrink: 0;
+}
+
+.playback-buttons {
+  display: flex;
+  gap: 4px;
+}
+
+.playback-buttons button {
+  background: var(--bg-input);
+  color: var(--text-primary);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  padding: 4px 10px;
+  font-size: 14px;
+  cursor: pointer;
+  line-height: 1;
+}
+
+.playback-buttons button:hover {
+  border-color: var(--accent);
+  background: var(--accent);
+  color: #fff;
+}
+
+.playback-buttons button:disabled {
+  opacity: 0.4;
+  cursor: default;
+}
+
+.playback-buttons button:disabled:hover {
+  border-color: var(--border);
+  background: var(--bg-input);
+  color: var(--text-primary);
+}
+
+.scrubber {
+  flex: 1;
+  accent-color: var(--accent);
+  cursor: pointer;
+}
+
+.tick-display {
+  font-variant-numeric: tabular-nums;
+  color: var(--text-secondary);
+  font-size: 12px;
+  min-width: 120px;
+  text-align: center;
+}
+
+.speed-control {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  color: var(--text-secondary);
+}
+
+.speed-control input[type="range"] {
+  width: 80px;
+  accent-color: var(--accent);
+}
+
+.speed-value {
+  min-width: 36px;
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+  color: var(--text-primary);
+  font-weight: 600;
+}
+
+/* === Building View === */
+.building-empty {
+  color: var(--text-secondary);
+  font-size: 14px;
+}
+
+/* === Charts === */
+.chart-container {
+  background: var(--bg-secondary);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 8px 8px 4px 0;
+  flex: 1;
+  min-height: 140px;
+  display: flex;
+  flex-direction: column;
+}
+
+.chart-title {
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--text-secondary);
+  padding: 0 0 4px 12px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.chart-body {
+  flex: 1;
+  min-height: 0;
+}
+
+/* Recharts overrides */
+.recharts-cartesian-grid-horizontal line,
+.recharts-cartesian-grid-vertical line {
+  stroke: var(--border);
+  stroke-opacity: 0.5;
+}
+
+.recharts-text {
+  fill: var(--text-muted);
+  font-size: 10px;
+}
+
+.recharts-tooltip-wrapper .recharts-default-tooltip {
+  background: var(--bg-secondary) !important;
+  border: 1px solid var(--border) !important;
+  border-radius: 4px;
+  font-size: 11px;
+}
+
+.recharts-legend-item-text {
+  color: var(--text-secondary) !important;
+  font-size: 10px;
+}
