@@ -95,6 +95,8 @@ class Engine:
         for passenger in passengers:
             car = self._scheduler.assign(passenger.request, self._building)
             passenger.car_id = car.id
+            if scores := getattr(self._scheduler, "last_scores", None):
+                passenger.scores = scores
             car.assigned.append(passenger)
             if self._loggers.dispatch:
                 self._loggers.dispatch.log(tick, passenger)
