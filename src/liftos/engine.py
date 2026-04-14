@@ -48,44 +48,37 @@ class Engine:
         self._demand = DemandTracker()
 
     def run(self, requests: list[Request], max_ticks: int = 2500) -> EngineRunResult:
-        requests_by_tick: dict[int, list[Request]] = {}
+        pending: dict[int, list[Request]] = {}
         for req in requests:
-            requests_by_tick.setdefault(req.time, []).append(req)
+            pending.setdefault(req.time, []).append(req)
+        last_arrival = max((r.time for r in requests), default=-1)
 
-        last_request_tick = max((r.time for r in requests), default=-1)
-        all_passengers: list[Passenger] = []
-        tick = 0
-
-        while tick <= max_ticks:
-            # INSERT
-            new_passengers = self._insert(requests_by_tick.pop(tick, []))
-            all_passengers.extend(new_passengers)
-
-            # DISPATCH
-            self._dispatch(new_passengers, tick)
-
-            # MERGE
-            for car in self._building.cars:
-                self._merge(car, tick)
-
-            # REDISTRIBUTE
-            for car in self._building.cars:
-                self._redistribute(car)
-
-            # FINISH
-            self._finish(tick)
-
-            # Termination check
-            all_inserted = tick >= last_request_tick
-            all_served = all_passengers and all(
-                p.dropoff_tick is not None for p in all_passengers
-            )
-            if all_inserted and all_served:
+        passengers: list[Passenger] = []
+        for tick in range(max_ticks + 1):
+            passengers.extend(self._step(tick, pending))
+            if tick >= last_arrival and self._all_delivered(passengers):
                 break
 
-            tick += 1
+        return EngineRunResult(passengers=passengers, ticks=tick)
 
-        return EngineRunResult(passengers=all_passengers, ticks=tick)
+    def _step(
+        self, tick: int, pending: dict[int, list[Request]]
+    ) -> list[Passenger]:
+        """Execute one simulation tick. Returns newly inserted passengers."""
+        new_passengers = self._insert(pending.pop(tick, []))
+        self._dispatch(new_passengers, tick)
+        for car in self._building.cars:
+            self._merge(car, tick)
+        for car in self._building.cars:
+            self._redistribute(car)
+        self._finish(tick)
+        return new_passengers
+
+    @staticmethod
+    def _all_delivered(passengers: list[Passenger]) -> bool:
+        return bool(passengers) and all(
+            p.dropoff_tick is not None for p in passengers
+        )
 
     def _insert(self, requests: list[Request]) -> list[Passenger]:
         from liftos.models import Passenger
