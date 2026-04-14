@@ -54,7 +54,7 @@ def generate_charts(
 
     fig, axes = plt.subplots(
         2, 2,
-        figsize=(max(14, len(workloads) * 5), 12),
+        figsize=(max(16, len(workloads) * 6), 13),
         gridspec_kw={"height_ratios": [3, 1]},
     )
 
@@ -142,34 +142,62 @@ def _stats_table(
     algorithms: list[str],
     all_stats: dict[tuple[str, str], dict],
 ) -> None:
-    """Render a table of mean / p95 values below the chart."""
+    """Render a table with separate mean and p95 columns, winners highlighted."""
     cell_text = []
     row_colors = []
+    means_grid: list[list[float]] = []
+    p95s_grid: list[list[float]] = []
     for i, alg in enumerate(algorithms):
         row = []
+        means_row = []
+        p95s_row = []
         for wl in workloads:
             s = all_stats.get((wl, alg), {}).get(metric, {})
             mean = s.get("mean", 0)
             p95 = s.get("p95", 0)
-            row.append(f"{mean:.0f} / {p95:.0f}")
+            row.extend([f"{mean:.0f}", f"{p95:.0f}"])
+            means_row.append(mean)
+            p95s_row.append(p95)
         cell_text.append(row)
+        means_grid.append(means_row)
+        p95s_grid.append(p95s_row)
         row_colors.append(f"C{i}")
+
+    # Column headers: paired mean/p95 under each workload
+    col_labels = []
+    for wl in workloads:
+        col_labels.extend([f"{wl}\nmean", f"{wl}\np95"])
 
     ax.axis("off")
     table = ax.table(
         cellText=cell_text,
         rowLabels=algorithms,
-        colLabels=workloads,
+        colLabels=col_labels,
         loc="center",
         cellLoc="center",
     )
     table.auto_set_font_size(False)
     table.set_fontsize(9)
-    table.scale(1, 1.5)
+    table.scale(1, 1.8)
 
     # Color row labels to match chart legend
     for i, color in enumerate(row_colors):
         table[i + 1, -1].set_text_props(color=color, fontweight="bold")
 
+    # Highlight best (lowest) per column — mean and p95 independently
+    for wl_idx in range(len(workloads)):
+        mean_col = wl_idx * 2
+        p95_col = wl_idx * 2 + 1
+
+        col_means = [means_grid[r][wl_idx] for r in range(len(algorithms))]
+        best_mean = col_means.index(min(col_means))
+        table[best_mean + 1, mean_col].set_facecolor("#d4edda")
+        table[best_mean + 1, mean_col].set_text_props(fontweight="bold")
+
+        col_p95s = [p95s_grid[r][wl_idx] for r in range(len(algorithms))]
+        best_p95 = col_p95s.index(min(col_p95s))
+        table[best_p95 + 1, p95_col].set_facecolor("#d4edda")
+        table[best_p95 + 1, p95_col].set_text_props(fontweight="bold")
+
     title = metric.replace("_", " ").title()
-    ax.set_title(f"{title}: mean / p95 (ticks)", fontsize=10, pad=8)
+    ax.set_title(f"{title} (ticks)", fontsize=10, pad=8)

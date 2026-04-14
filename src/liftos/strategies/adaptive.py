@@ -16,9 +16,9 @@ class Adaptive:
 
     def __init__(
         self,
-        w_eta: float = 0.2,
+        w_eta: float = 0.4,
         w_ride: float = 0.2,
-        w_load: float = 0.6,
+        w_load: float = 0.4,
     ) -> None:
         total = w_eta + w_ride + w_load
         if abs(total - 1.0) > 1e-6:
