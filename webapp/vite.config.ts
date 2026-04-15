@@ -62,5 +62,6 @@ function liftosApiPlugin(): Plugin {
 }
 
 export default defineConfig({
+  base: "/liftos/",
   plugins: [react(), liftosApiPlugin()],
 });

@@ -94,7 +94,7 @@ Independent of the scheduler, idle cars are proactively moved toward high-demand
 
 A browser-based replay tool for visualizing benchmark runs. Animated elevator shafts, live stats, and real-time charts update as the simulation plays back tick by tick.
 
-[Watch the demo (docs/demo.mov)](docs/demo.mov)
+[Live demo](https://chenliu0831.github.io/liftos/)
 
 **Features:** animated SVG building with car movement and direction indicators, per-floor waiting passenger counts, four live line charts (wait time, total time, car occupancy, throughput), running mean/p95 stats, scrubber and speed control (1-100x), keyboard shortcuts (Space, arrows). Switch between algorithms and workloads mid-replay to compare behavior.
 
