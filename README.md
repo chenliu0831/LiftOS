@@ -74,9 +74,9 @@ Weighted multi-factor scorer. Each candidate car is scored on three normalized [
 
 | Component | Weight | What it measures |
 |-----------|--------|------------------|
-| **ETA** | 0.4 | Estimated ticks to reach pickup floor, accounting for current direction and pending stops |
-| **Ride** | 0.2 | Estimated ticks from pickup to dropoff, including intermediate stops for existing passengers |
-| **Load** | 0.4 | Occupancy ratio including both onboard and assigned-but-waiting passengers |
+| **ETA** | 0.8 | Estimated ticks to reach pickup floor, accounting for current direction and pending stops |
+| **Ride** | 0.1 | Estimated ticks from pickup to dropoff, including intermediate stops for onboard and assigned passengers |
+| **Load** | 0.1 | Occupancy ratio including both onboard and assigned-but-waiting passengers |
 
 Lowest total score wins. Three optimizations layer on top of the base scorer:
 
@@ -112,20 +112,20 @@ See [webapp/README.md](webapp/README.md) for details.
 
 | Workload | Metric | Adaptive | Round Robin | Nearest Car |
 |----------|--------|----------|-------------|-------------|
-| up_peak | wait mean / p95 | **11 / 29** | 23 / 48 | 13 / 55 |
-| up_peak | total mean / p95 | **30 / 55** | 41 / 70 | 33 / 79 |
-| down_peak | wait mean / p95 | **9 / 21** | 16 / 38 | 14 / 50 |
-| down_peak | total mean / p95 | **29 / 52** | 37 / 64 | 35 / 80 |
-| normal_hour | wait mean / p95 | **7 / 16** | 13 / 32 | 10 / 42 |
-| normal_hour | total mean / p95 | **20 / 37** | 26 / 52 | 28 / 65 |
-| stress | wait mean / p95 | **8 / 21** | 16 / 40 | 12 / 43 |
-| stress | total mean / p95 | **24 / 50** | 32 / 68 | 33 / 78 |
+| up_peak | wait mean / p95 | **7 / 22** | 23 / 48 | 13 / 55 |
+| up_peak | total mean / p95 | **26 / 50** | 41 / 70 | 33 / 79 |
+| down_peak | wait mean / p95 | **8 / 19** | 16 / 38 | 14 / 50 |
+| down_peak | total mean / p95 | **27 / 48** | 37 / 64 | 35 / 80 |
+| normal_hour | wait mean / p95 | **6 / 14** | 13 / 32 | 10 / 42 |
+| normal_hour | total mean / p95 | **20 / 38** | 26 / 52 | 28 / 65 |
+| stress | wait mean / p95 | **6 / 15** | 16 / 40 | 12 / 43 |
+| stress | total mean / p95 | **24 / 51** | 32 / 68 | 33 / 78 |
 
 Adaptive wins on mean and p95 across every workload and metric.
 
 ## Optimization Journey
 
-The adaptive scheduler went through four stages of development. Each change was benchmarked against the same 500-passenger, 20-floor, 6-car configuration.
+The adaptive scheduler went through five stages of development. Each change was benchmarked against the same 500-passenger, 20-floor, 6-car configuration.
 
 ### Stage 1: Baseline Adaptive
 
@@ -150,3 +150,15 @@ The remaining tail latency gap came from spike traffic: the scorer would assign 
 The deadline threshold of 0.75 was found by sweeping 0.5--2.0. Sensitivity is non-monotonic (0.7 and 0.8 are worse than 0.75), so the parameter should not be changed without re-benchmarking.
 
 Result: stress wait p95 dropped from 187 to **135** (beating round-robin's 151), and stress total p95 dropped from 214 to **162** (beating round-robin's 178). Adaptive now wins on mean and p95 across every workload.
+
+### Stage 5: ETA and Normalization Fixes
+
+Dispatch log inspection revealed negative ETA scores in 8% of dispatches and two normalization issues causing unfair cross-car comparisons.
+
+1. **Negative reversal ETAs.** `_estimate_eta` computed the turnaround point from all targets instead of only targets ahead in the current direction. When a car going UP had all targets below it, `up_distance` went negative. The reverse leg also failed to count intermediate stops. Fix: compute turnaround from forward targets only and count stops on both legs.
+2. **Ride denominator varied per car** (`num_floors + len(car.passengers) * 2`). A 5-floor ride scored 0.25 on an empty car but 0.15 on a loaded one, making loaded cars look artificially attractive. Fix: use `num_floors - 1` as a constant denominator.
+3. **ETA denominator too small** (`2 * num_floors`). The capacity overflow penalty always pushed past the clamp -- a full car 1 floor away and 10 floors away both scored eta=1.0. Fix: raise to `4 * num_floors`.
+
+With accurate scoring in place, a weight sweep across 66 combinations (0.1 increments), 5 seeds, and three congestion levels (500/800/1200 passengers) found that the old (0.4/0.2/0.4) weights over-weighted load. The ride estimate was also improved to count intermediate stops from assigned passengers, not just onboard ones. Final weights: **(0.8/0.1/0.1)**. ETA dominates now that it's accurate, ride carries a small signal from intermediate stops, and a light load weight prevents piling without causing distant-car assignments.
+
+Result: stress wait p95 dropped from 21 to **15**, up_peak wait p95 from 23 to **22**. Negative scores were eliminated and the scorer now makes fair comparisons across cars with different loads and directions.

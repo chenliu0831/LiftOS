@@ -16,9 +16,9 @@ class Adaptive:
 
     def __init__(
         self,
-        w_eta: float = 0.4,
-        w_ride: float = 0.2,
-        w_load: float = 0.4,
+        w_eta: float = 0.8,
+        w_ride: float = 0.1,
+        w_load: float = 0.1,
         w_deadline: float = 1.0,
         deadline_mult: float = 0.75,
     ) -> None:
@@ -51,10 +51,10 @@ class Adaptive:
                 eta_raw += 2 * building.num_floors
 
             # Normalize to [0, 1]
-            max_eta = 2 * building.num_floors
+            max_eta = 4 * building.num_floors
             norm_eta = min(eta_raw / max_eta, 1.0) if max_eta > 0 else 0.0
 
-            max_ride = building.num_floors + len(car.passengers) * 2
+            max_ride = building.num_floors - 1
             norm_ride = min(ride_raw / max_ride, 1.0) if max_ride > 0 else 0.0
 
             norm_load = min(load_raw, 1.0)
@@ -146,14 +146,15 @@ class Adaptive:
     def _estimate_ride(self, car: Car, source: int, dest: int) -> float:
         """Estimate ticks from source to dest once passenger is aboard."""
         direct_distance = abs(dest - source)
-        # Estimate intermediate stops: passengers on board whose dest
-        # is between source and dest
+        # Count intermediate stops from onboard AND assigned passengers
+        stops = set()
+        for p in car.passengers:
+            stops.add(p.request.dest)
+        for p in car.assigned:
+            stops.add(p.request.source)
+            stops.add(p.request.dest)
         if dest > source:
-            intermediate_stops = sum(
-                1 for p in car.passengers if source < p.request.dest < dest
-            )
+            intermediate = sum(1 for f in stops if source < f < dest)
         else:
-            intermediate_stops = sum(
-                1 for p in car.passengers if dest < p.request.dest < source
-            )
-        return direct_distance + intermediate_stops * 2
+            intermediate = sum(1 for f in stops if dest < f < source)
+        return direct_distance + intermediate * 2
